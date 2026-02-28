@@ -162,5 +162,33 @@ class CalculatorApiTest {
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.result").value(5.0))
     }
+
+    @Test
+    fun `deve falhar quando email tiver plus que é convertido em espaço`() {
+        // Bug: O '+' em application/x-www-form-urlencoded é convertido em espaço
+        // Enviando "usuario+tag@gmail.com" via content string (não usando .param)
+        mockMvc.perform(
+            post("/calculate")
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .content("email=usuario+tag@gmail.com&num1=10&num2=5&operation=add")
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.status").value("error"))
+            .andExpect(jsonPath("$.message").value("Email inválido"))
+    }
+
+    @Test
+    fun `deve aceitar email com plus quando usar encoding %2B`() {
+        // Solução: Usar %2B para representar '+' literal
+        mockMvc.perform(
+            post("/calculate")
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .content("email=usuario%2Btag@gmail.com&num1=10&num2=5&operation=add")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.email").value("usuario+tag@gmail.com"))
+            .andExpect(jsonPath("$.result").value(15.0))
+            .andExpect(jsonPath("$.status").value("success"))
+    }
 }
 
